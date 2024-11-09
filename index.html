@@ -38,36 +38,40 @@
         </div>
     </div>
     <script>
-        function CardItem(data) {
-            this.data = data;
+        function CardItem(cardData) {
+            this.data = cardData;
             this.view = document.createElement('div');
             var img = document.createElement('img')
             this.view.classList.add('card-item');
             this.view.appendChild(img);
-            img.src = data.card_images[0].image_url;
-            img.title = `${data.name}\n${data.desc}`;
+            img.src = cardData.card_images[0].image_url;
+            img.title = `${cardData.name}\n${cardData.desc}`;
         }
 
         var container = document.querySelector('.container');
         var lastChild = document.querySelector('.card-item');
         var updating = false;
+        let url = 'https://db.ygoprodeck.com/api/v7/cardinfo.php?num=1&offset=0&sort=random&cachebust';
 
         function update() {
             if(updating) return;
             updating = true;
-            var promises = [];
-            for(var i = 0; i < 5; i++) {
-                promises.push(fetch('https://db.ygoprodeck.com/api/v7/randomcard.php').then(function(resp) {
-                    return resp.text();
-                }).then(function(card) {
-                    card = new CardItem(JSON.parse(card));
-                    container.insertBefore(card.view, lastChild);
-                }));
-            }
-            Promise.all(promises).then(function() {
+            fetch(url).then(function (resp) {
+                return resp.text();
+            }).then(function (text) {
+                return JSON.parse(text);
+            }).then(function (data) {
+                for (const cardData of data.data) {
+                    const cardItem = new CardItem(cardData);
+                    container.insertBefore(cardItem.view, lastChild);
+                }
+                url = data.meta.next_page;
+            }).catch(function(e) {
+                console.error(e);
+            }).finally(function() {
                 updating = false;
                 checkUpdate();
-            });
+            })
         }
         function checkUpdate() {
             if(window.scrollY + window.innerHeight > lastChild.offsetTop) {
